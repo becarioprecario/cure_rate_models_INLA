@@ -143,7 +143,8 @@ while(i <= niter) {
     data = d.survival[[i]], family = "weibullsurv", 
     control.predictor = list(link = 1), control.fixed = list(mean.intercept = 0,
       prec.intercept = 0.001, mean = 0, prec = 0.001),
-    control.mode =  list(theta = ifelse(i == 1, 0, survival.inla[[i-1]]$mode$theta), restart = TRUE),
+    control.mode = list(theta = 0.15, restart = TRUE),
+    #control.mode =  list(theta = ifelse(i == 1, 0, survival.inla[[i-1]]$mode$theta), restart = TRUE),
 
     control.family = list(prior = "loggamma", param = c(0.01, 0.01)),
     verbose = FALSE)
