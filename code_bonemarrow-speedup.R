@@ -210,7 +210,7 @@ while(i <= niter) {
 
   i <- i + 1
 } 
-print(Sys.time()-start);
+print(Sys.time() - start);
 #Time difference of 1.240756 mins
 
 ###Burning and thinning
@@ -260,9 +260,10 @@ library(doParallel)
 #############
 
 # Parameters for simulation
-ni<-200000
+ni <- 200000
 #ni<-20000
-na<-0.2*ni; nt<-max(1, floor(2*ni/1000)) #1500 sample size
+na <- 0.2 * ni
+nt <- max(1, floor(2 * ni / 1000)) #1500 sample size
 
 
 bonemarrow_mixtureII <- function(){
@@ -327,7 +328,7 @@ bonemarrow_mixtureII <- function(){
   
 }
 
-filename.JAGS <- file.path( paste("bonemarrow_mixtureII.txt"))
+filename.JAGS <- file.path(paste("bonemarrow_mixtureII.txt"))
 write.model(bonemarrow_mixtureII, filename.JAGS)
 
 
@@ -344,26 +345,30 @@ data.JAGS$n.z <- length(data.JAGS$idx.z)
 data.JAGS$n.zfixed <- length(data.JAGS$idx.zfixed)
 
 registerDoParallel(3)
-seeds <- c(34,73,1500)
+seeds <- c(34, 73, 1500)
 jags.inits <- function(i){
-  return(list(.RNG.name="lecuyer::RngStream", .RNG.seed=seeds[i]))
+  return(list(.RNG.name = "lecuyer::RngStream", .RNG.seed = seeds[i]))
 }
 mcmc.combine <- function(...){
   return(as.mcmc.list(sapply(list(...), mcmc)))
 }
 
-parameters.JAGS <- c("z","eta","betaAll1","betaAut1", "alpha","betaAll2","betaAut2")#
+parameters.JAGS <- c("z", "eta", "betaAll1", "betaAut1", "alpha",
+  "betaAll2", "betaAut2")#
 
-Sys.time()->start;
+Sys.time() -> start;
 jags.parsamples <- foreach( 
-  i=1:getDoParWorkers(), .inorder=F, .packages=c('rjags','random'), .combine="mcmc.combine", .multicombine=T) %dopar% {
+  i = 1:getDoParWorkers(), .inorder = FALSE, .packages = c('rjags','random'),
+    .combine = "mcmc.combine", .multicombine = TRUE) %dopar% {
     load.module("lecuyer")
-    model.jags <- jags.model(data=data.JAGS, file=filename.JAGS, inits=jags.inits(i), n.adapt=na)
-    result <- coda.samples(model.jags, variable.names=parameters.JAGS, n.iter=ni, thin=nt)
+    model.jags <- jags.model(data = data.JAGS, file = filename.JAGS,
+      inits = jags.inits(i), n.adapt = na)
+    result <- coda.samples(model.jags, variable.names = parameters.JAGS,
+      n.iter = ni, thin = nt)
     return(result)
   } 
-print(Sys.time()-start);
-summary(jags.parsamples,dig=3)
+print(Sys.time() - start);
+summary(jags.parsamples, dig = 3)
 
 #-----------MCMC Convergence----------
 # plot(jags.parsamples)
@@ -384,20 +389,20 @@ names(sims.list) <- parameters.JAGS
 
 ## Put the posterior sample of each parameter in a list
 for(p1 in seq_along(parameters.JAGS)){
-  iik <- grep(paste("^", parameters.JAGS[p1], sep=""), colnames(result1))
-  sims.list[[p1]] <- result1[,iik]
+  iik <- grep(paste("^", parameters.JAGS[p1], sep = ""), colnames(result1))
+  sims.list[[p1]] <- result1[, iik]
 }
 
 ## PARAMETERS AND DERIVED QUANTITIES SAMPLES #1500 sample size
 parameters.JAGS <- c("z", "eta", "betaAll1", "betaAut1", "alpha",
   "betaAll2", "betaAut2")#
-z<- sims.list[[1]]  
+z <- sims.list[[1]]  
 eta <- sims.list[[2]] 
 betaAll1 <- sims.list[[3]] 
-betaAut1<- sims.list[[4]]
-alpha<-sims.list[[5]]
-betaAll2<-sims.list[[6]]
-betaAut2<-sims.list[[7]]
+betaAut1 <- sims.list[[4]]
+alpha <- sims.list[[5]]
+betaAll2 <- sims.list[[6]]
+betaAut2 <- sims.list[[7]]
 
 
 #
@@ -438,81 +443,85 @@ lines(density(betaAut2), col = "red")
 #Check convergence and configuration of z
 mlik.s <- unlist(lapply(survival.inla, function(X){X$mlik[1, 1]}))
 mlik.l <- unlist(lapply(logistic.inla, function(X){X$mlik[1, 1]}))
-which.max(mlik.s+mlik.l)#41
-hist(mlik.s+mlik.l)#models probbaility
-plot(mlik.s+mlik.l)#check convergence
+which.max(mlik.s + mlik.l)#41
+hist(mlik.s + mlik.l)#models probbaility
+plot(mlik.s + mlik.l)#check convergence
 
 
 #Model adjustment with z most likely configuration
 
-d.logistic.mlm<-cbind.data.frame(time=bmt$time, delta=bmt$delta, Auto=bmt$Auto, z=z.inla[, as.integer(which.max(mlik.s+mlik.l))])
+d.logistic.mlm <- cbind.data.frame(time = bmt$time, delta = bmt$delta,
+  Auto = bmt$Auto, z = z.inla[, as.integer(which.max(mlik.s + mlik.l))])
 
 logistic.mlm <- inla(z ~ 1 + Auto, family = "binomial", 
-                      data = as.data.frame(d.logistic.mlm), Ntrials = 1,
-                      control.compute=list(config = TRUE),
-                      control.predictor = list(link = 1),
-                      control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-                                           mean = 0, prec = 0.001)) 
+  data = as.data.frame(d.logistic.mlm), Ntrials = 1,
+  control.compute=list(config = TRUE),
+  control.predictor = list(link = 1),
+  control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
+    mean = 0, prec = 0.001)) 
 
-logistic.mlm.sample<-inla.posterior.sample(3000,logistic.mlm)
+logistic.mlm.sample <- inla.posterior.sample(3000, logistic.mlm)
 str(logistic.mlm.sample[[1]])
 length(logistic.mlm.sample)
-coefs <- do.call(cbind, lapply(logistic.mlm.sample, function(X){X$latent[92:93, 1]}))
+coefs <- do.call(cbind, lapply(logistic.mlm.sample, function(X){
+  X$latent[92:93, 1]
+}))
+
 
 #Cured proportion
 #i1=allogeneic
 #i2=autologous
 xx1 <- as.vector(t(coefs) %*% matrix(c(1, 0), ncol = 1))
-xx2<-as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
+xx2 <- as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
 
 
-pi1in<-1/(1+exp(-xx1)) # allogenic cure proportion
-pi2in<-1/(1+exp(-xx2)) # autologous cure proportion
-
-
+pi1in <- 1 / (1 + exp(-xx1)) # allogenic cure proportion
+pi2in <- 1 / (1 + exp(-xx2)) # autologous cure proportion
 
 
 d.survival.mlm<-subset(d.logistic.mlm[,],d.logistic.mlm[,4]==0)
 
 survival.mlm <- inla(inla.surv(time, delta) ~ 1 + Auto, 
-                      data = d.survival.mlm, family = "weibullsurv", 
-                      control.compute=list(config=TRUE),
-                      control.predictor = list(link = 1),
-                      control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-                                           mean = 0, prec = 0.001),
-                      control.mode =  list(theta = 0.1, restart = TRUE),
-                      control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
+  data = d.survival.mlm, family = "weibullsurv", 
+  control.compute = list(config = TRUE),
+  control.predictor = list(link = 1),
+  control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
+    mean = 0, prec = 0.001),
+  control.mode =  list(theta = 0.1, restart = TRUE),
+  control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
 
-survival.mlm.sample<-inla.posterior.sample(3000,survival.mlm)
+survival.mlm.sample <- inla.posterior.sample(3000, survival.mlm)
 str(survival.mlm.sample[[1]])
 length(survival.mlm.sample)
-coefs <- do.call(cbind, lapply(survival.mlm.sample, function(X){X$latent[70:71, 1]}))
+coefs <- do.call(cbind, lapply(survival.mlm.sample, function(X){
+  X$latent[70:71, 1]
+}))
 alphain <-lapply(survival.mlm.sample, function(X){X$hyperpar[1]})
 xx1 <- as.vector(t(coefs) %*% matrix(c(1, 0), ncol = 1))
-xx2<-as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
+xx2 <- as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
 
-lpi1in<-exp(xx1)
-lpi2in<-exp(xx2)
+lpi1in <- exp(xx1)
+lpi2in <- exp(xx2)
 
 
 
-t<-seq(0,max(bmt$time),by=0.01)
-spi1in=matrix(NA,nrow=length(xx1),ncol=length(t))
-spi2in=matrix(NA,nrow=length(xx1),ncol=length(t))
+t <- seq(0, max(bmt$time), by = 0.01)
+spi1in = matrix(NA, nrow = length(xx1), ncol = length(t))
+spi2in = matrix(NA, nrow = length(xx1), ncol = length(t))
 
 for(i in 1:length(xx1)){
   for(j in 1:length(t)){
     
-    spi1in[i,j]=exp(-lpi1in[i]*(t[j]^alphain[i][[1]]))
-    spi2in[i,j]=exp(-lpi2in[i]*(t[j]^alphain[i][[1]]))
+    spi1in[i,j] = exp(-lpi1in[i] * (t[j]^alphain[i][[1]]))
+    spi2in[i,j] = exp(-lpi2in[i] * (t[j]^alphain[i][[1]]))
     
   }
 }
 
 # Mean of the posterior distribution
 
-mspi1in <- apply(spi1in,2,mean)# allogeneic
-mspi2in <- apply(spi2in,2,mean)# autologous
+mspi1in <- apply(spi1in, 2, mean)# allogeneic
+mspi2in <- apply(spi2in, 2, mean)# autologous
 
 
 # MCMC DERIVED QUANTITIES---> Cure proportion and Survival curves por susceptible individuals
@@ -522,56 +531,57 @@ mspi2in <- apply(spi2in,2,mean)# autologous
 #i1=allogeneic
 #i2=autologous
 
-pi1=exp(betaAll1)/(1+exp(betaAll1))
-pi2=exp(betaAll1+betaAut1)/(1+exp(betaAll1+betaAut1))
+pi1 = exp(betaAll1) / (1 + exp(betaAll1))
+pi2 = exp(betaAll1 + betaAut1) / (1 + exp(betaAll1+betaAut1))
 
 #Survival uncured proportion
 
-lpi1=vector()
-lpi2=vector()
+lpi1 = vector()
+lpi2 = vector()
 
 for(i in 1:length(betaAll1)){
   
-  lpi1[i]<-exp(betaAll2[i])
-  lpi2[i]=exp(betaAll2[i]+betaAut2[i])
+  lpi1[i] <- exp(betaAll2[i])
+  lpi2[i] = exp(betaAll2[i] + betaAut2[i])
   
 }
 
-t<-seq(0,max(bmt$time),by=0.01)
-spi1=matrix(NA,nrow=length(betaAll1),ncol=length(t))
-spi2=matrix(NA,nrow=length(betaAll1),ncol=length(t))
+t <- seq(0, max(bmt$time), by = 0.01)
+spi1 = matrix(NA, nrow = length(betaAll1), ncol = length(t))
+spi2 = matrix(NA, nrow = length(betaAll1), ncol = length(t))
 
 
-for(i in 1:length(betaAll1)){
-  for(j in 1:length(t)){
+for(i in 1:length(betaAll1)) {
+  for(j in 1:length(t)) {
     
-    spi1[i,j]=exp(-lpi1[i]*(t[j]^alpha[i]))
-    spi2[i,j]=exp(-lpi2[i]*(t[j]^alpha[i]))
+    spi1[i,j] = exp(-lpi1[i] * (t[j]^alpha[i]))
+    spi2[i,j] = exp(-lpi2[i] * (t[j]^alpha[i]))
     
     
   }
 }
 
-mspi1<-apply(spi1,2,mean)
-mspi2<-apply(spi2,2,mean)
+mspi1 <- apply(spi1,2,mean)
+mspi2 <- apply(spi2,2,mean)
 
 
 
-par(mar=c(8,4,4,4))
-plot(t,mspi1in,type="l",lwd=10,ylab="",xlab="",cex.axis=3,cex.lab=4)
-lines(t,mspi1,col="red",lty=2,lwd=10)
-mtext(text="Time", side=1, line=3.7, las=1,cex=3,at=830)
+par(mar = c(8, 4, 4, 4))
+plot(t, mspi1in, type = "l", lwd = 10, ylab = "", xlab = "", cex.axis = 3,
+  cex.lab = 4)
+lines(t, mspi1, col = "red",  lty  =  2, lwd = 10)
+mtext(text =  "Time", side =  1, line = 3.7, las = 1, cex = 3, at =  830)
 grid(nx = NULL, ny = NULL, col = "gray50", lty = "solid",
      lwd = par("lwd"), equilogs = TRUE)
 box(col = 'gray50')
 
 
 
-
-par(mar=c(8,4,4,4))
-plot(t,mspi2in,type="l",lwd=10,ylab="",xlab="",cex.axis=3,cex.lab=4)
-lines(t,mspi2,col="red",lty=2,lwd=10)
-mtext(text="Time (days)", side=1, line=3.7, las=1,cex=3,at=830)
+par(mar = c(8, 4, 4, 4))
+plot(t, mspi2in, type = "l",  lwd  =  10, ylab = "", xlab = "", cex.axis = 3,
+  cex.lab = 4)
+lines(t, mspi2, col = "red", lty = 2, lwd = 10)
+mtext(text = "Time (days)", side = 1, line = 3.7, las = 1, cex = 3, at = 830)
 grid(nx = NULL, ny = NULL, col = "gray50", lty = "solid",
      lwd = par("lwd"), equilogs = TRUE)
 box(col = 'gray50')
@@ -588,7 +598,7 @@ dev.new()
 
 plot((z.inla %*% weights)[bmt$delta == 0],
   apply(z, 2, mean)[bmt$delta == 0],
-  ylim = c(0,1), xlim = c(0,1), xlab = "INLA", ylab = "MCMC")
+  ylim = c(0, 1), xlim = c(0, 1), xlab = "INLA", ylab = "MCMC")
 abline(0, 1)
 
 # Fit model with two extreme cases:
@@ -627,5 +637,5 @@ dev.off()
 
 
 
-#save(file = "code_bonemarrow-speedup.RData", list = ls())
+save(file = "code_bonemarrow-speedup.RData", list = ls())
 
