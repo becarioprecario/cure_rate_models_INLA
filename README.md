@@ -15,3 +15,4 @@ Files included are:
 
 * `code_melanoma.R`: Example on the `e1684` dataset.
 
+* `code_bonemarrow-speedup.R`: Example on the `bmt` dataset. This is an optimized version of the model fitting and includes code to obtain derived quantities (such as the survival curves).
