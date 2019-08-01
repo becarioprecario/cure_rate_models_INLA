@@ -1,4 +1,5 @@
 
+
 # Note: This code checks whether a configuration has already been fitted
 # and replaced then
 
@@ -9,10 +10,11 @@
 
 source("cure_utils.R")
 
+
 #install.packages("smcure")
 library("smcure")
 data(bmt)
-colnames(bmt) <- c("time", "delta","Auto")
+colnames(bmt) <- c("time", "delta", "Auto")
 
 #Re-scale data
 bmt$time <- bmt$time / max(bmt$time)
@@ -127,59 +129,59 @@ z.id <- function(z) {
 Sys.time()->start;
 i <- 1 
 while(i <= niter) {
-
-  print(paste0("**ITERATION: ", i ))
-
+  
+  print(paste0("**ITERATION: ", i))
+  
   # CHeck wether has already been sampled
   zz <- z.id(z[, i])
   aux.idx <- which(zz == names(z.list))
-
+  
   if(length(aux.idx) == 0) { #Fit models 
-  
-  #########
-  #STEP 1.#
-  #########
-  
-  
-  #FIT LOGISTIC REGRESSION MODEL WITH INLA 
-  d.logistic$z <- z[, i]
-  
-  logistic.inla <- inla(z ~ 1 + Auto, family = "binomial", 
-    data = as.data.frame(d.logistic), Ntrials = 1,
-    control.predictor = list(link = 1),
-    control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-      mean = 0, prec = 0.001)) 
-  
-  #FIT SURVIVAL MODEL WITH INLA 
-  
-  d.survival <- subset(d.logistic, z == 0)
-  
-  survival.inla <- inla(inla.surv(time, delta) ~ 1 + Auto, 
-    data = d.survival, family = "weibullsurv", 
-    control.predictor = list(link = 1),
-    control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-      mean = 0, prec = 0.001),
-    control.mode =  list(theta = 0.1, restart = TRUE),
-    #control.mode =  list(theta = ifelse(i == 1, 0, survival.inla[[i-1]]$mode$theta), restart = TRUE),
-    control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
-  
-
-  print(table(d.survival$delta))
-
+    
+    #########
+    #STEP 1.#
+    #########
+    
+    
+    #FIT LOGISTIC REGRESSION MODEL WITH INLA 
+    d.logistic$z <- z[, i]
+    
+    logistic.inla <- inla(z ~ 1 + Auto, family = "binomial", 
+      data = as.data.frame(d.logistic), Ntrials = 1,
+      control.predictor = list(link = 1),
+      control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
+        mean = 0, prec = 0.001)) 
+    
+    #FIT SURVIVAL MODEL WITH INLA 
+    
+    d.survival <- subset(d.logistic, z == 0)
+    
+    survival.inla <- inla(inla.surv(time, delta) ~ 1 + Auto, 
+      data = d.survival, family = "weibullsurv", 
+      control.predictor = list(link = 1),
+      control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
+        mean = 0, prec = 0.001),
+      control.mode =  list(theta = 0.1, restart = TRUE),
+      #control.mode =  list(theta = ifelse(i == 1, 0, survival.inla[[i-1]]$mode$theta), restart = TRUE),
+      control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
+    
+    
+    print(table(d.survival$delta))
+    
     #Add configuration and results
     n.z <- n.z + 1 
     aux.idx <- n.z
-
+    
     z.list[[n.z]] <- z[, i]
     z.idx[i] <- aux.idx
     names(z.list)[n.z] <- z.id(z[, i])
     logistic.list[[n.z]] <- logistic.inla
     survival.list[[n.z]] <- survival.inla
-
+    
   } else { #z has already appeared
     z.idx[i] <- aux.idx
   }
-
+  
   ###########  
   #STEP 2.###
   ###########
@@ -207,11 +209,12 @@ while(i <= niter) {
   pz[, i] <- piz(bmt$delta, eta[, i], su[, i])  
   
   z[, i + 1] <- upz(pz[, i])
-
+  
   i <- i + 1
 } 
 print(Sys.time() - start);
-#Time difference of 1.240756 mins
+
+
 
 ###Burning and thinning
 nthining <- seq(21, niter, by = 2)
@@ -229,6 +232,8 @@ bma.survival <- INLABMA:::fitmargBMA2(survival.inla, weights,
   "marginals.fixed")
 bma.survival.alpha <- INLABMA:::fitmargBMA2(survival.inla,
   weights, "marginals.hyperpar")
+
+save(file = "bonemarrow_mgs_outcomes.RData", list = ls())
 
 ###SUMMARY POSTERIORS
 inla.zmarginal(bma.logistic[[1]])#ball1
@@ -267,27 +272,27 @@ nt <- max(1, floor(2 * ni / 1000)) #1500 sample size
 
 
 bonemarrow_mixtureII <- function(){
-
+  
   for(i in 1:n.z) {
     # Non-observed events
     z[idx.z[i]] ~ dbern(eta[idx.z[i]])
     #logit(eta[idx.z[i]]) <- betaAll1 + betaAut1 * Auto[idx.z[i]]
   }
-
+  
   for(i in 1:n.zfixed) {
     # Observed events: non-cured
     z[idx.zfixed[i]] <- 0
     #logit(eta[idx.zfixed[i]]) <- betaAll1 + betaAut1 * Auto[idx.zfixed[i]]
-
+    
   }
-
+  
   for(i in 1: N)
   {
     # LOGISTIC REGRESSION MODEL 
     
     #z[i] ~ dbern(eta[i])
     
-    logit(eta[i]) <- betaAll1+betaAut1*Auto[i]
+    logit(eta[i]) <- betaAll1 + betaAut1 * Auto[i]
     
     # WEIBULL AFT MODEL
     
@@ -295,19 +300,21 @@ bonemarrow_mixtureII <- function(){
     lambda[i] <- exp(betaAll2 + betaAut2 * Auto[i])#beta0
     
     #survival function
-    s[i] <- exp(-lambda[i]*pow(time[i],alpha))
+    s[i] <- exp(-lambda[i] * pow(time[i], alpha))
     
     #hazard function
-    h[i] <- lambda[i]*alpha*pow(time[i],alpha-1)
+    h[i] <- lambda[i] * alpha * pow(time[i], alpha - 1)
     
     #density function
-    f[i] <- lambda[i]*alpha*pow(time[i],alpha-1)*exp(-lambda[i]*pow(time[i],alpha))
+    f[i] <- lambda[i] * alpha * pow(time[i], alpha - 1) * 
+      exp(-lambda[i] * pow(time[i], alpha))
     
     
     # DEFINITION OF THE LOG-LIKELIHOOD USING ZEROS TRICK
     #delta: not censoring indicator
     
-    L[i] <- pow((1-eta[i])*f[i],delta[i])*pow((eta[i])+(1-eta[i])*s[i],1-delta[i])
+    L[i] <- pow((1 - eta[i]) * f[i], delta[i]) * 
+      pow((eta[i]) + (1 - eta[i]) * s[i], 1 - delta[i])
     
     logL[i] <- log(L[i])
     
@@ -319,11 +326,11 @@ bonemarrow_mixtureII <- function(){
   
   # MARGINAL PRIOR DISTRIBUTIONS
   
-  betaAll1 ~ dnorm(0,0.001)
-  betaAut1 ~ dnorm(0,0.001)
-  betaAll2 ~ dnorm(0,0.001)
-  betaAut2 ~ dnorm(0,0.001)
-  sigma ~ dunif(0,10)
+  betaAll1 ~ dnorm(0, 0.001)
+  betaAut1 ~ dnorm(0, 0.001)
+  betaAll2 ~ dnorm(0, 0.001)
+  betaAut2 ~ dnorm(0, 0.001)
+  sigma ~ dunif(0, 10)
   alpha <- 1 / sigma
   
 }
@@ -359,7 +366,7 @@ parameters.JAGS <- c("z", "eta", "betaAll1", "betaAut1", "alpha",
 Sys.time() -> start;
 jags.parsamples <- foreach( 
   i = 1:getDoParWorkers(), .inorder = FALSE, .packages = c('rjags','random'),
-    .combine = "mcmc.combine", .multicombine = TRUE) %dopar% {
+  .combine = "mcmc.combine", .multicombine = TRUE) %dopar% {
     load.module("lecuyer")
     model.jags <- jags.model(data = data.JAGS, file = filename.JAGS,
       inits = jags.inits(i), n.adapt = na)
@@ -396,13 +403,15 @@ for(p1 in seq_along(parameters.JAGS)){
 ## PARAMETERS AND DERIVED QUANTITIES SAMPLES #1500 sample size
 parameters.JAGS <- c("z", "eta", "betaAll1", "betaAut1", "alpha",
   "betaAll2", "betaAut2")#
-z <- sims.list[[1]]  
+#z <- sims.list[[1]]  
 eta <- sims.list[[2]] 
 betaAll1 <- sims.list[[3]] 
 betaAut1 <- sims.list[[4]]
-alpha <- sims.list[[5]]
+alpha<- sims.list[[5]]
 betaAll2 <- sims.list[[6]]
 betaAut2 <- sims.list[[7]]
+
+save(file = "bonemarrow_mcmc_outcomes.RData", list = ls())
 
 
 #
@@ -441,9 +450,13 @@ lines(density(betaAut2), col = "red")
 # INLA DERIVED QUANTITIES---> Cure proportion and Survival curves por susceptible individuals
 
 #Check convergence and configuration of z
-mlik.s <- unlist(lapply(survival.inla, function(X){X$mlik[1, 1]}))
-mlik.l <- unlist(lapply(logistic.inla, function(X){X$mlik[1, 1]}))
-which.max(mlik.s + mlik.l)#41
+mlik.s <- unlist(lapply(survival.inla, function(X){
+  X$mlik[1, 1]
+}))
+mlik.l <- unlist(lapply(logistic.inla, function(X){
+  X$mlik[1, 1]
+}))
+which.max(mlik.s + mlik.l)#
 hist(mlik.s + mlik.l)#models probbaility
 plot(mlik.s + mlik.l)#check convergence
 
@@ -478,8 +491,9 @@ xx2 <- as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
 pi1in <- 1 / (1 + exp(-xx1)) # allogenic cure proportion
 pi2in <- 1 / (1 + exp(-xx2)) # autologous cure proportion
 
+summary(pi1in);summary(pi2in)
 
-d.survival.mlm<-subset(d.logistic.mlm[,],d.logistic.mlm[,4]==0)
+d.survival.mlm <- subset(d.logistic.mlm[, ], d.logistic.mlm[, 4] == 0)
 
 survival.mlm <- inla(inla.surv(time, delta) ~ 1 + Auto, 
   data = d.survival.mlm, family = "weibullsurv", 
@@ -496,7 +510,9 @@ length(survival.mlm.sample)
 coefs <- do.call(cbind, lapply(survival.mlm.sample, function(X){
   X$latent[70:71, 1]
 }))
-alphain <-lapply(survival.mlm.sample, function(X){X$hyperpar[1]})
+alphain <-lapply(survival.mlm.sample, function(X){
+  X$hyperpar[1]
+})
 xx1 <- as.vector(t(coefs) %*% matrix(c(1, 0), ncol = 1))
 xx2 <- as.vector(t(coefs) %*% matrix(c(1, 1), ncol = 1))
 
@@ -534,6 +550,8 @@ mspi2in <- apply(spi2in, 2, mean)# autologous
 pi1 = exp(betaAll1) / (1 + exp(betaAll1))
 pi2 = exp(betaAll1 + betaAut1) / (1 + exp(betaAll1+betaAut1))
 
+summary(pi1);summary(pi2)
+
 #Survival uncured proportion
 
 lpi1 = vector()
@@ -566,76 +584,32 @@ mspi2 <- apply(spi2,2,mean)
 
 
 
+postscript(file ="./survivalallo.eps",horizontal=FALSE,width = 400,
+  height = 400)
 par(mar = c(8, 4, 4, 4))
 plot(t, mspi1in, type = "l", lwd = 10, ylab = "", xlab = "", cex.axis = 3,
   cex.lab = 4)
 lines(t, mspi1, col = "red",  lty  =  2, lwd = 10)
-mtext(text =  "Time", side =  1, line = 3.7, las = 1, cex = 3, at =  830)
+mtext(text =  "Time", side =  1, line = 3.7, las = 1, cex = 3, at =  0.5)
 grid(nx = NULL, ny = NULL, col = "gray50", lty = "solid",
-     lwd = par("lwd"), equilogs = TRUE)
+  lwd = par("lwd"), equilogs = TRUE)
 box(col = 'gray50')
+dev.off()
 
-
-
+postscript(file ="./survivalau.eps",horizontal=FALSE,width = 400, height = 400)
 par(mar = c(8, 4, 4, 4))
 plot(t, mspi2in, type = "l",  lwd  =  10, ylab = "", xlab = "", cex.axis = 3,
   cex.lab = 4)
 lines(t, mspi2, col = "red", lty = 2, lwd = 10)
-mtext(text = "Time (days)", side = 1, line = 3.7, las = 1, cex = 3, at = 830)
+mtext(text = "Time", side = 1, line = 3.7, las = 1, cex = 3, at = 0.5)
 grid(nx = NULL, ny = NULL, col = "gray50", lty = "solid",
-     lwd = par("lwd"), equilogs = TRUE)
+  lwd = par("lwd"), equilogs = TRUE)
 box(col = 'gray50')
-
-
-
-
-
-
-
-
-#Estimates of z
-dev.new()
-
-plot((z.inla %*% weights)[bmt$delta == 0],
-  apply(z, 2, mean)[bmt$delta == 0],
-  ylim = c(0, 1), xlim = c(0, 1), xlab = "INLA", ylab = "MCMC")
-abline(0, 1)
-
-# Fit model with two extreme cases:
-# (1) all patients in survival model
-# (2) only patients with observed event in survival model
-
-m1 <- inla(inla.surv(time, delta) ~ 1 + Auto,
-  data = bmt, family = "weibullsurv",
-  control.predictor = list(link = 1),
-  control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-    mean = 0, prec = 0.001),
-  control.mode =  list(theta = 0.1, restart = TRUE),
-  control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
-
-m2 <- inla(inla.surv(time, delta) ~ 1 + Auto,
-  data = bmt[bmt$delta == 1, ], family = "weibullsurv",
-  control.predictor = list(link = 1),
-  control.fixed = list(mean.intercept = 0, prec.intercept = 0.001,
-    mean = 0, prec = 0.001),
-  control.mode =  list(theta = 0.1, restart = TRUE),
-  control.family = list(prior = "loggamma", param = c(0.1, 0.1)))
-
-#PLot stuff
-pdf(file = "bonemarrow-margs.pdf", width = 8, height = 4)
-par(mfrow = c(1, 2))
-
-plot(bma.survival[[1]], type = "l", main = "ball2")
-lines(density(betaAll2), col = "red")
-lines(m1$marginals.fixed[[1]], col = "blue")
-lines(m2$marginals.fixed[[1]], col = "green")
-plot(bma.survival[[2]], type = "l", main = "baut2")
-lines(density(betaAut2), col = "red")
-lines(m1$marginals.fixed[[2]], col = "blue")
-lines(m2$marginals.fixed[[2]], col = "green")
 dev.off()
 
 
 
-save(file = "code_bonemarrow-speedup.RData", list = ls())
+
+
+
 
