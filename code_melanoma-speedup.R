@@ -238,7 +238,7 @@ bma.survival <- INLABMA:::fitmargBMA2(survival.inla, weights,
 bma.survival.alpha <- INLABMA:::fitmargBMA2(survival.inla,
   weights, "marginals.hyperpar")
 
-save(file = "melanoma_mgs_outcomes.RData", list = ls())
+#save(file = "melanoma_mgs_outcomes.RData", list = ls())
 
 ###SUMMARY POSTERIORS
 inla.zmarginal(bma.logistic[[1]])#beta01
@@ -427,7 +427,7 @@ betaW2<-sims.list[[9]]
 betaIFN2<-sims.list[[10]]
 betaA2<-sims.list[[11]]
 
-save(file = "melanoma_mcmc_outcomes.RData", list = ls())
+#save(file = "melanoma_mcmc_outcomes.RData", list = ls())
 
 
 #
