@@ -391,7 +391,7 @@ print(Sys.time() - start);
 summary(jags.parsamples, dig = 3)
 
 #-----------MCMC Convergence----------
-plot(jags.parsamples)
+#plot(jags.parsamples)
 gelman.diag(jags.parsamples, multivariate = FALSE)
 #-------------------------------------
 #---------------------------------------------------------------#
@@ -418,14 +418,14 @@ parameters.JAGS <- c("z", "eta", "beta01", "betaW1", "betaIFN1", "betaA1",
 #z<- sims.list[[1]]  
 eta <- sims.list[[2]] 
 beta01 <- sims.list[[3]] 
-betaW1<- sims.list[[4]]
-betaIFN1<-sims.list[[5]]
-betaA1<-sims.list[[6]]
-alpha<-sims.list[[7]]
-beta02<-sims.list[[8]]
-betaW2<-sims.list[[9]]
-betaIFN2<-sims.list[[10]]
-betaA2<-sims.list[[11]]
+betaW1 <- sims.list[[4]]
+betaIFN1 <- sims.list[[5]]
+betaA1 <- sims.list[[6]]
+alpha <- sims.list[[7]]
+beta02 <- sims.list[[8]]
+betaW2 <- sims.list[[9]]
+betaIFN2 <- sims.list[[10]]
+betaA2 <- sims.list[[11]]
 
 #save(file = "melanoma_mcmc_outcomes.RData", list = ls())
 
@@ -633,12 +633,12 @@ lpi2 = vector()
 lpi3 = vector()
 lpi4 = vector()
 
-for(i in 1:length(beta02)){
+for(i in 1:length(beta02)) {
   
-  lpi1[i] <- exp(beta02 + betaA2 * mean(e1684$A))
-  lpi2[i] <- exp(beta02 + betaIFN2 + betaA2 * mean(e1684$A))
-  lpi3[i] <- exp(beta02 + betaW2 + betaA2 * mean(e1684$A))
-  lpi4[i] <- exp(beta02 + betaW2 + betaIFN2 + betaA2 * mean(e1684$A))
+  lpi1[i] <- exp(beta02[i] + betaA2[i] * mean(e1684$A))
+  lpi2[i] <- exp(beta02[i] + betaIFN2[i] + betaA2[i] * mean(e1684$A))
+  lpi3[i] <- exp(beta02[i] + betaW2[i] + betaA2[i] * mean(e1684$A))
+  lpi4[i] <- exp(beta02[i] + betaW2[i] + betaIFN2[i] + betaA2[i] * mean(e1684$A))
 }
 
 t <- seq(0, max(e1684$time), by = 0.01)
